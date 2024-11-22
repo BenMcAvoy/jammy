@@ -1852,8 +1852,11 @@ checksum = "540654e97a3f4470a492cd30ff187bc95d89557a903a2bbf112e2fae98104ef2"
 name = "jammy"
 version = "0.1.0"
 dependencies = [
+ "argon2",
+ "chrono",
  "hmac",
  "jwt",
+ "lazy_static",
  "poem",
  "poem-openapi",
  "rand",
@@ -1862,6 +1865,7 @@ dependencies = [
  "sha2",
  "surrealdb",
  "tokio",
+ "tracing",
  "tracing-subscriber",
 ]
 
