@@ -23,10 +23,7 @@ use argon2::{
 };
 
 use jwt::{SignWithKey, VerifyWithKey};
-use poem::{
-    error::InternalServerError, listener::TcpListener, web::Data, EndpointExt, Request, Result,
-    Route,
-};
+use poem::{listener::TcpListener, web::Data, EndpointExt, Request, Result, Route};
 use poem_openapi::{
     auth::ApiKey,
     payload::{Json, PlainText},
@@ -148,7 +145,7 @@ impl Api {
         let user: Option<UserRecord> = db
             .select(("user", req.0.username.as_str()))
             .await
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         if let Some(_user) = user {
             return Err(poem::Error::from_status(StatusCode::CONFLICT));
@@ -160,17 +157,16 @@ impl Api {
         let argon2 = Argon2::default();
         let hash = argon2
             .hash_password(password.as_bytes(), &salt)
-            .map_err(InternalServerError)?
-            .to_string();
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let record: Option<Record> = db
             .create(("user", req.username.as_str()))
             .content(UserRecord {
                 username: req.username.clone(),
-                hash,
+                hash: hash.to_string(),
             })
             .await
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let exp = (Utc::now() + Duration::hours(5)).timestamp();
 
@@ -181,7 +177,7 @@ impl Api {
 
         let token = claims
             .sign_with_key(server_key.0)
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         Ok(PlainText(token))
     }
@@ -198,7 +194,7 @@ impl Api {
         let user: Option<UserRecord> = db
             .select(("user", req.0.username.as_str()))
             .await
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         if let Some(user) = user {
             let passed_hash = PasswordHash::new(&user.hash).unwrap();
@@ -215,7 +211,7 @@ impl Api {
                 exp,
             }
             .sign_with_key(server_key.0)
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
             return Ok(PlainText(token));
         }
@@ -235,7 +231,7 @@ impl Api {
         let deleted_one: Option<UserRecord> = db
             .delete(("user", user.as_str()))
             .await
-            .map_err(InternalServerError)?;
+            .map_err(|_| poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
         let mut blacklist = BLACKLIST.lock().unwrap();
 
