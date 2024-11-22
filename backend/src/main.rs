@@ -1,5 +1,5 @@
-// TODO: Refactor this entire file into mutliple files
-// and add comments
+// TODO: Refactor this entire file into multiple files
+// TODO: Add comments
 
 use std::collections::HashSet;
 use std::sync::Mutex;
@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use argon2::Algorithm;
 use argon2::Params;
 use argon2::Version;
+use hmac::{Hmac, Mac};
 use surrealdb::engine::local::Db;
 use surrealdb::RecordId;
 use surrealdb::Surreal;
@@ -21,7 +22,6 @@ use argon2::{
     Argon2,
 };
 
-use hmac::Hmac;
 use jwt::{SignWithKey, VerifyWithKey};
 use poem::{
     error::InternalServerError, listener::TcpListener, web::Data, EndpointExt, Request, Result,
@@ -154,7 +154,7 @@ impl Api {
             return Err(poem::Error::from_status(StatusCode::CONFLICT));
         }
 
-        // Goodies, we don't have this user yet!
+        // Goody, we don't have this user yet!
         let password = req.password.clone();
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
@@ -264,17 +264,25 @@ impl Api {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if std::env::var_os("RUST_LOG").is_none() {
-        std::env::set_var("RUST_LOG", "poem=debug,jammy=debug");
-    }
+    //if std::env::var_os("RUST_LOG").is_none() {
+    //    std::env::set_var("RUST_LOG", "poem=debug,jammy=debug");
+    //}
 
-    tracing_subscriber::fmt::init();
+    #[cfg(debug_assertions)]
+    std::env::set_var("RUST_LOG", "info");
+
+    // info for all crates
+    tracing_subscriber::fmt::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+
+    //tracing_subscriber::fmt::init();
 
     let db = Surreal::new::<RocksDb>("db").await?;
     db.use_ns("test").use_db("test").await?;
 
     let api_service =
-        OpenApiService::new(Api, "Jammy Backend", "1.0").server("https://localhost:3000/api");
+        OpenApiService::new(Api, "Jammy Backend", "1.0").server("http://localhost:3000/api");
 
     let ui = api_service.swagger_ui();
 
@@ -312,7 +320,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Algorithm::Argon2id,
             Version::V0x13,
             1 << 16, // 64 MB of memory
-            8,       // 8 iterations for time cost
+            1,       // 8 iterations for time cost
             8,       // 8 lanes for parallelism
         );
     };
@@ -329,6 +337,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
 
     tracing::info!("Server key generated in {:?}", now.elapsed());
+
+    let server_key = Hmac::<Sha256>::new_from_slice(&key).unwrap();
 
     let app = Route::new()
         .nest("/api", api_service)
