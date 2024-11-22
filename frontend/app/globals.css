@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #faf4ed;
+	--background-dark: #f2e8d9;
+
+  --foreground: #fff;
+
+	--primary: #ea9a97;
+	--primary-med: #cc7c78;
+	--primary-dark: #c46c6a;
+
+	--secondary: #d7827e;
+	--secondary-med: #c46c6a;
+	--secondary-dark: #b0565a;
+}
+
+/*@media (prefers-color-scheme: dark) {*/
+/*  :root {*/
+/*    --background: #0a0a0a;*/
+/*    --foreground: #ededed;*/
+/*  }*/
+/*}*/
+
+body {
+  color: var(--foreground);
+	/* Linear gradient, --primary 10% to background 100%, primary at top */
+  background: radial-gradient(var(--primary-dark) 1%, var(--primary) 100%);
+	text-color: var(--foreground);
+}
